@@ -1,6 +1,3 @@
-// Cloudflare Worker that proxies calls to Google's Gemini API. This is the only
-// place the API key lives — see DEPLOY.md for setup.
-
 const MODEL = "gemini-3.6-flash";
 const MAX_TOKENS_CAP = 900;
 const RATE_LIMIT_PER_HOUR = 30;
@@ -11,8 +8,6 @@ const rateMap = new Map();
 
 function corsHeaders(){
   return {
-    // Tighten this to your actual GitHub Pages URL once deployed, e.g.:
-    // "Access-Control-Allow-Origin": "https://yourname.github.io"
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type"
@@ -85,8 +80,6 @@ export default {
       );
     }
 
-    // Translate Gemini's response shape back into the Anthropic-shaped response
-    // the page already knows how to read — so index.html needs zero changes.
     const candidate = data.candidates && data.candidates[0];
     const text = candidate?.content?.parts?.map(p => p.text).join("") || "";
     if (!text) {
