@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Relay — AI SDLC Orchestrator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10131A;
+    --panel:#171B24;
+    --panel-2:#1D2230;
+    --border:#262C38;
+    --text:#EDEFF4;
+    --text-dim:#8890A3;
+    --text-faint:#5A6072;
+    --router:#FF8FD1;
+    --retriever:#5ED9C9;
+    --backend:#5EC8FA;
+    --frontend:#FFB870;
+    --integrator:#B48EFF;
+    --reviewer:#63E6BE;
+    --hit:#63E6BE;
+    --danger:#FF8B8B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;}
+  ::selection{background:#3A4A6B;}
+  .wrap{max-width:1240px;margin:0 auto;padding:28px 24px 60px;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:24px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:baseline;gap:12px;}
+  .brand h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-0.01em;}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--reviewer);display:inline-block;margin-right:8px;box-shadow:0 0 8px var(--reviewer);}
+  header p{margin:2px 0 0;color:var(--text-dim);font-size:13.5px;max-width:560px;line-height:1.5;}
+  .mode-toggle{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-dim);}
+  .mode-toggle .pill{display:flex;border:1px solid var(--border);border-radius:20px;overflow:hidden;background:var(--panel);}
+  .mode-toggle button{border:none;background:transparent;color:var(--text-dim);padding:6px 14px;font-family:'Sora',sans-serif;font-size:12.5px;cursor:pointer;}
+  .mode-toggle button.active{background:var(--panel-2);color:var(--text);}
+  .status-banner{font-size:12px;margin-top:8px;padding:6px 12px;border-radius:5px;border:1px solid var(--border);color:var(--text-dim);min-height:14px;display:inline-block;max-width:340px;}
+  .status-banner.live{color:var(--backend);border-color:var(--backend);background:rgba(94,200,250,0.08);}
+  .status-banner.fallback{color:var(--frontend);border-color:var(--frontend);background:rgba(255,184,112,0.08);}
+  .status-banner.info{color:var(--text-dim);}
+  .status-banner.dismissed{display:none;}
+  .status-banner .status-dismiss{background:none;border:none;color:inherit;cursor:pointer;font-size:14px;line-height:1;padding:0;margin-left:8px;opacity:0.65;vertical-align:middle;}
+  .status-banner .status-dismiss:hover{opacity:1;}
+
+  .layout{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start;}
+  @media (max-width:980px){.layout{grid-template-columns:1fr;}}
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px;}
+  .panel h2{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-faint);margin:0 0 14px;font-weight:600;}
+
+  textarea{width:100%;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Sora',sans-serif;font-size:13.5px;padding:10px 12px;resize:vertical;min-height:70px;line-height:1.5;}
+  textarea:focus{outline:none;border-color:var(--router);}
+
+  .presets{display:flex;flex-direction:column;gap:6px;margin-top:12px;}
+  .preset-btn{text-align:left;background:var(--panel-2);border:1px solid var(--border);color:var(--text-dim);padding:9px 11px;border-radius:6px;font-size:12.5px;font-family:'Sora',sans-serif;cursor:pointer;line-height:1.4;}
+  .preset-btn:hover{border-color:var(--text-faint);color:var(--text);}
+  .preset-btn.selected{border-color:var(--router);color:var(--text);background:#1A2230;}
+
+  .run-row{display:flex;gap:8px;margin-top:14px;}
+  .run-btn{flex:1;background:var(--router);color:#1A0B14;border:none;border-radius:6px;padding:11px;font-family:'Sora',sans-serif;font-weight:600;font-size:13.5px;cursor:pointer;}
+  .run-btn:disabled{opacity:0.45;cursor:not-allowed;}
+  .reset-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:6px;padding:11px 12px;font-size:12.5px;cursor:pointer;font-family:'Sora',sans-serif;}
+
+  .sens-row{margin-top:16px;}
+  .sens-row label{font-size:12px;color:var(--text-dim);display:flex;justify-content:space-between;}
+  input[type=range]{width:100%;margin-top:6px;accent-color:var(--router);}
+  .sens-hint{font-size:11px;color:var(--text-faint);margin-top:4px;line-height:1.4;}
+
+  .section-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .section-head h2{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-faint);margin:0;font-weight:600;}
+  .progress-summary{display:flex;gap:14px;font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;}
+  .progress-summary .ps-item{display:flex;align-items:center;gap:5px;}
+  .progress-summary .ps-item::before{content:'';width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .progress-summary .ps-done::before{background:var(--hit);}
+  .progress-summary .ps-running::before{background:var(--backend);}
+  .progress-summary .ps-todo::before{background:var(--text-faint);}
+
+  .pipeline{display:flex;flex-wrap:wrap;row-gap:16px;align-items:stretch;gap:0;margin-bottom:20px;padding-bottom:4px;}
+  .pcol{display:flex;flex-direction:column;min-width:150px;flex:1 1 150px;}
+  .arrow{display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:16px;min-width:22px;padding-top:56px;}
+  .branch-wrap{display:flex;flex-direction:column;gap:8px;flex:1;}
+  .branch-label{font-size:9.5px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-faint);text-align:center;margin-bottom:2px;}
+  .revision-label{font-size:10px;color:var(--frontend);text-align:center;margin:0 0 6px;font-weight:600;letter-spacing:0.03em;}
+
+  .stage{position:relative;display:flex;flex-direction:column;padding:14px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px;flex:1;min-height:132px;}
+  .stage-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;}
+  .ticket-key{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:0.02em;}
+  .avatar{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#10131A;flex-shrink:0;}
+  .stage h3{margin:4px 0 4px;font-size:12.5px;line-height:1.3;}
+  .stage .agent-label{font-size:10px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;}
+  .stage-desc{font-size:11px;color:var(--text-dim);margin:0 0 10px;line-height:1.4;}
+  .stage .stage-status{margin-top:auto;padding-top:8px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text-faint);min-height:16px;}
+  .status-pill{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;padding:3px 8px;border-radius:10px;background:rgba(136,144,163,0.12);color:var(--text-faint);}
+  .status-pill[data-pill="running"]{background:rgba(94,200,250,0.14);color:var(--backend);}
+  .status-pill[data-pill="done"]{background:rgba(99,230,190,0.14);color:var(--reviewer);}
+  .status-pill[data-pill="hit"]{background:rgba(99,230,190,0.14);color:var(--hit);}
+  .stage-detail{display:block;margin-top:4px;font-size:10.5px;color:var(--text-faint);}
+  .spin{width:8px;height:8px;border-radius:50%;border:2px solid rgba(94,200,250,0.35);border-top-color:currentColor;animation:sp 0.7s linear infinite;flex-shrink:0;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+  .stage[data-state="running"]{background:#1A2230;}
+  .stage-top-bar{position:absolute;top:0;left:0;right:0;height:3px;border-radius:8px 8px 0 0;}
+  .stage[data-state="idle"] .stage-top-bar{opacity:0.15;}
+  .stage[data-state="idle"]{opacity:0.75;}
+
+  .outputs{display:flex;flex-direction:column;gap:10px;}
+  .out-panel{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:6px;padding:14px 16px;}
+  .out-panel .out-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .out-panel .out-head .tag{font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;}
+  .out-panel .out-head .badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:2px 7px;border-radius:10px;border:1px solid var(--border);white-space:nowrap;}
+  .out-panel .badge.hit{color:var(--hit);border-color:var(--hit);}
+  .out-panel .badge.live{color:var(--backend);border-color:var(--backend);}
+  .out-panel .badge.scripted{color:var(--text-dim);border-color:var(--border);}
+  .out-panel .badge.template{color:var(--text-faint);border-color:var(--border);border-style:dashed;}
+  .out-panel .badge.local{color:var(--text-dim);border-color:var(--border);}
+  .out-panel .body{font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.6;color:#D6D9E2;white-space:pre-wrap;}
+  .doc-chip{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--panel-2);border:1px solid var(--border);border-radius:4px;padding:2px 8px;margin:2px 6px 2px 0;color:var(--text-dim);}
+
+  .stats{margin-top:20px;}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .stat{background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:12px;}
+  .stat .v{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;}
+  .stat .l{font-size:10.5px;color:var(--text-faint);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em;}
+  .cost-row{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--text-dim);flex-wrap:wrap;}
+  .cost-row input{width:70px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 7px;font-family:'IBM Plex Mono',monospace;font-size:12px;}
+
+  footer{margin-top:28px;font-size:11.5px;color:var(--text-faint);line-height:1.6;border-top:1px solid var(--border);padding-top:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand"><span class="dot"></span><h1>Relay</h1></div>
+      <p>A router decides which specialists a request needs; specialists work in parallel; an integrator reconciles their output and revises it if a reviewer pushes back. Demonstrated against a fictional product ("Wayfind," a delivery route-planning SaaS).</p>
+    </div>
+    <div>
+      <div class="mode-toggle">
+        <span>Mode</span>
+        <div class="pill">
+          <button id="mode-live" class="active">Live (Gemini API)</button>
+          <button id="mode-demo">Demo playback</button>
+        </div>
+      </div>
+      <div class="status-banner info" id="status-note"><span id="status-note-text">Not yet run this session.</span><button id="status-dismiss" class="status-dismiss" title="Dismiss" hidden>×</button></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="panel">
+      <h2>Feature request</h2>
+      <textarea id="ticket-input" placeholder="Describe a feature request…">Let drivers export their assigned routes as a CSV file from the mobile app.</textarea>
+      <div class="presets" id="presets"></div>
+      <div class="run-row">
+        <button class="run-btn" id="run-btn">Run pipeline</button>
+        <button class="reset-btn" id="reset-btn" title="Clear cache & stats">Reset</button>
+      </div>
+      <div class="sens-row">
+        <label><span>Cache sensitivity</span><span id="sens-val">0.32</span></label>
+        <input type="range" id="sens-slider" min="0.15" max="0.9" step="0.01" value="0.32">
+        <div class="sens-hint">Lower = more aggressive cache reuse. Higher = safer, fewer hits. Real lexical-similarity cache — see README.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-head">
+        <h2>Workflow</h2>
+        <div class="progress-summary" id="progress-summary"></div>
+      </div>
+      <div class="pipeline" id="pipeline"></div>
+      <div class="section-head"><h2>Activity log</h2></div>
+      <div class="outputs" id="outputs"></div>
+
+      <div class="panel stats">
+        <h2>Session cache &amp; cost performance</h2>
+        <div class="stat-grid">
+          <div class="stat"><div class="v" id="s-tickets">0</div><div class="l">Tickets run</div></div>
+          <div class="stat"><div class="v" id="s-hitrate">—</div><div class="l">Cache hit rate</div></div>
+          <div class="stat"><div class="v" id="s-avoided">0</div><div class="l">Model calls avoided</div></div>
+          <div class="stat"><div class="v" id="s-tokens">0</div><div class="l">Tokens saved (est.)</div></div>
+        </div>
+        <div class="cost-row">
+          <span>Assumed cost per 1K tokens:</span>
+          <input type="text" id="cost-input" value="0.003">
+          <span>→ estimated $ saved this session: <strong id="s-saved" style="color:var(--text)">$0.000</strong></span>
+        </div>
+      </div>
+
+      <footer>
+        Retrieval and caching always run locally in your browser. In <strong>Live</strong> mode, Router/Specialist/Integrator/Reviewer stages call the real Gemini API (via a Cloudflare Worker that holds the key); if unreachable, it falls back automatically (see the banner above). Run preset 3 ("notify dispatchers via webhook") to see a full revision loop: the Reviewer pushes back, the Integrator revises, and the Reviewer checks again.
+      </footer>
+    </div>
+  </div>
+</div>
+
+<script>
+const CORPUS = [
+  {id:'arch', title:'Architecture Overview', text:'Wayfind is composed of five services: Routes API (route CRUD and assignment), Driver App (React Native, offline-sync capable), Notification Service (webhooks with retry policy), Billing Service, and Auth Service. Routes API is the source of truth for route and stop data.'},
+  {id:'routes-api', title:'Routes API Docs', text:'Routes API exposes POST /routes, GET /routes/{id}, and GET /routes?driver_id=. Each route has stops, a driver_id, and a status field (assigned, in_progress, completed). Downstream services should treat Routes API as authoritative for status transitions.'},
+  {id:'export', title:'Export Feature Docs', text:'Routes currently support PDF export via the ReportGenerator service, triggered from the Driver App route detail screen. ReportGenerator handles serialization of stops and addresses into a printable layout. No CSV or other export formats exist yet.'},
+  {id:'notif', title:'Notification Service Docs', text:'Notification Service delivers webhook events to subscribed endpoints with exponential-backoff retries. Subscriptions are currently scoped per-driver only. Existing event types include route.assigned and route.updated; there is no route.completed event yet.'},
+  {id:'driver-app', title:'Driver App Docs', text:'Driver App is a React Native app supporting offline sync of assigned routes. All screens currently use a single hardcoded light color palette; there is no theming layer or dark mode support today.'},
+  {id:'retention', title:'Data Retention & Compliance Docs', text:'Route data, including stops and addresses, is retained for 90 days after completion, after which it is purged per data retention policy. Any export or data-access feature must respect this retention window. GDPR data export requests are handled separately via DataExportService.'}
+];
+
+const PRESETS = [
+  {
+    id:'p1', text:'Let drivers export their assigned routes as a CSV file from the mobile app.',
+    canned:{
+      router:"TRACKS: both — this touches the Routes API/export pipeline (backend) and needs a new action in the Driver App (frontend).",
+      tracks:'both',
+      backend:"Add GET /routes/{driver_id}/export?format=csv to Routes API. Extend ReportGenerator with a CSV formatter that reuses the existing route/stop serialization already used for PDF export, rather than building a second data-fetch path.",
+      frontend:"Add an 'Export CSV' action next to the existing 'Export PDF' button on the Driver App route list screen, reusing the current download/share-sheet flow — no new UI pattern needed.",
+      integrator:"Combined plan: Routes API gains a CSV export endpoint backed by ReportGenerator's new CSV formatter; Driver App adds a matching 'Export CSV' action using the existing share-sheet flow. The only shared contract is the file response — both tracks agree the endpoint returns a downloadable file stream, which the app's current download handling already supports. No interface conflicts between the two tracks.",
+      reviewer:"Approve, with two callouts. (1) ReportGenerator's PDF path escapes commas/newlines in address fields for layout reasons — the CSV formatter needs proper quoting or exports will silently corrupt for multi-part addresses. (2) Confirm CSV export respects the 90-day retention window. (3) Add a test for a route with zero stops.",
+      needsRevision:false
+    }
+  },
+  {
+    id:'p2', text:'Add the ability to download a CSV of a driver\'s routes.',
+    canned:{
+      router:"TRACKS: both — this touches the Routes API/export pipeline (backend) and needs a new action in the Driver App (frontend).",
+      tracks:'both',
+      backend:"Add GET /routes/{driver_id}/export?format=csv to Routes API. Extend ReportGenerator with a CSV formatter that reuses the existing route/stop serialization already used for PDF export, rather than building a second data-fetch path.",
+      frontend:"Add an 'Export CSV' action next to the existing 'Export PDF' button on the Driver App route list screen, reusing the current download/share-sheet flow — no new UI pattern needed.",
+      integrator:"Combined plan: Routes API gains a CSV export endpoint backed by ReportGenerator's new CSV formatter; Driver App adds a matching 'Export CSV' action using the existing share-sheet flow. The only shared contract is the file response — both tracks agree the endpoint returns a downloadable file stream, which the app's current download handling already supports. No interface conflicts between the two tracks.",
+      reviewer:"Approve, with two callouts. (1) ReportGenerator's PDF path escapes commas/newlines in address fields for layout reasons — the CSV formatter needs proper quoting or exports will silently corrupt for multi-part addresses. (2) Confirm CSV export respects the 90-day retention window. (3) Add a test for a route with zero stops.",
+      needsRevision:false
+    }
+  },
+  {
+    id:'p3', text:'Notify dispatchers via webhook when a route is marked completed.',
+    canned:{
+      router:"TRACKS: backend — this is a server-side event and subscription change; nothing here touches the Driver App UI.",
+      tracks:'backend',
+      backend:"Add a route.completed event type to Notification Service's webhook schema. Emit it from Routes API on the status transition to completed. Add dispatcher-level (not just driver-level) webhook subscriptions, since current subscriptions are scoped per-driver only.",
+      integrator:"Single-track ticket — no frontend changes, so no merge conflicts to resolve. Plan: extend Notification Service with a new route.completed event, emit it from Routes API on status transition, and add a dispatcher-level subscription option alongside the existing driver-level one. Payload includes route_id, driver_id, completed_at, and stop_count.",
+      reviewer:"Needs changes. (1) Dispatcher-level subscriptions are a new access concept — confirm the auth model, since current docs only describe driver-scoped access. (2) The retry policy assumes idempotent consumers; the route.completed payload needs an idempotency key. (3) Add a test for a route marked completed twice (retries/corrections).",
+      needsRevision:true,
+      integratorRevised:"Revised plan: added an idempotency_key field to the route.completed payload, generated once per status transition, so retried deliveries are safely ignorable by consumers. Dispatcher-level subscriptions now sit behind a new 'org.notifications.manage' permission, pending confirmation from the Auth Service owner rather than assuming access. Added an explicit test case for a route marked completed twice.",
+      reviewerRound2:"Approve. The idempotency key and the scoped permission address both concerns raised in the first pass. Ship it once the Auth Service permission check is confirmed."
+    }
+  },
+  {
+    id:'p4', text:'Add a dark mode option to the driver app.',
+    canned:{
+      router:"TRACKS: frontend — this is a UI/theming change with no backend or data model impact.",
+      tracks:'frontend',
+      frontend:"Driver App currently has one hardcoded light theme, so this is really 'introduce a theme system': extract colors into a token file, add a dark variant, and wire a settings toggle with a 'match system' option. Route data and offline sync are unaffected.",
+      integrator:"Single-track ticket — no backend changes, so no merge conflicts. Plan: add a theme-token layer to Driver App, define a dark palette, and add a settings toggle with system-detection.",
+      reviewer:"Approve for a phased rollout. (1) 'Audit existing screens' is open-ended — scope it to a concrete screen list before starting. (2) Check contrast ratios on the dark palette for outdoor/in-vehicle visibility. (3) Persist the theme choice per-device, not per-account, since a login can be shared across devices.",
+      needsRevision:false
+    }
+  }
+];
+
+const STOP = new Set(['the','a','an','to','of','in','on','for','and','or','is','are','be','with','as','by','at','from','that','this','it','can','will']);
+function tokenize(s){
+  return s.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/)
+    .filter(w=>w && w.length>1 && !STOP.has(w))
+    .map(w=> (w.length>3 && w.endsWith('s') && !w.endsWith('ss')) ? w.slice(0,-1) : w);
+}
+const docTokens = CORPUS.map(d=>tokenize(d.text));
+const df = {};
+docTokens.forEach(toks=>{ new Set(toks).forEach(t=>{ df[t]=(df[t]||0)+1; }); });
+function idf(t){ return Math.log((CORPUS.length+1)/((df[t]||0)+1))+1; }
+function tfidfVec(tokens){ const counts={}; tokens.forEach(t=>counts[t]=(counts[t]||0)+1); const v={}; for(const t in counts) v[t]=counts[t]*idf(t); return v; }
+const docVecs = docTokens.map(tfidfVec);
+function cosine(a,b){ let dot=0,na=0,nb=0; for(const k in a){na+=a[k]*a[k]; if(b[k]) dot+=a[k]*b[k];} for(const k in b) nb+=b[k]*b[k]; const denom=Math.sqrt(na)*Math.sqrt(nb); return denom? dot/denom : 0; }
+function retrieve(query,k=2){
+  const qv = tfidfVec(tokenize(query));
+  const scored = CORPUS.map((d,i)=>({doc:d, score:cosine(qv,docVecs[i])}));
+  scored.sort((a,b)=>b.score-a.score);
+  return scored.slice(0,k);
+}
+function bow(text){ const c={}; tokenize(text).forEach(t=>c[t]=(c[t]||0)+1); return c; }
+
+let cacheStore = [];
+let stats = {tickets:0, hits:0, misses:0, avoided:0, tokensSaved:0};
+function checkCache(stage, keyText, threshold){
+  let best=null, bestSim=0;
+  cacheStore.filter(e=>e.stage===stage).forEach(e=>{
+    const sim = cosine(bow(keyText), e.vector);
+    if(sim>bestSim){ bestSim=sim; best=e; }
+  });
+  if(best && bestSim>=threshold) return {hit:true, sim:bestSim, entry:best};
+  return {hit:false, sim:bestSim};
+}
+function storeCache(stage, keyText, output, usage){ cacheStore.push({stage, vector:bow(keyText), output, usage}); }
+
+// A browser can never safely call Gemini directly (no CORS, no safe place for a
+// key in public HTML), so this calls a Cloudflare Worker that holds the key server-side.
+const WORKER_ENDPOINT = "https://relay-demo.christiankhlee.workers.dev/";
+
+let lastErrorDetail = '';
+async function callGemini(system, userMsg){
+  if(WORKER_ENDPOINT.includes('YOUR-WORKER-NAME')){
+    lastErrorDetail = 'No Worker deployed yet — WORKER_ENDPOINT in index.html still has the placeholder URL. See DEPLOY.md.';
+    throw new Error(lastErrorDetail);
+  }
+  let response;
+  try{
+    response = await fetch(WORKER_ENDPOINT, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ max_tokens:900, system, messages:[{role:"user", content:userMsg}] })
+    });
+  } catch(networkErr){
+    lastErrorDetail = `Couldn't reach the Worker: ${networkErr.message}`;
+    throw networkErr;
+  }
+  let data;
+  try{ data = await response.json(); }
+  catch(parseErr){
+    lastErrorDetail = `Worker responded but wasn't valid JSON (HTTP ${response.status})`;
+    throw parseErr;
+  }
+  if(!response.ok || !data.content){
+    lastErrorDetail = `Worker/API error (HTTP ${response.status}): ${(data.error?.message || JSON.stringify(data)).slice(0,200)}`;
+    throw new Error(lastErrorDetail);
+  }
+  const text = data.content.filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+  const usage = data.usage || {input_tokens:400,output_tokens:150};
+  return {text, usage};
+}
+
+const PLAIN_TEXT_RULE = " Plain text only — no markdown, no **bold**, no # headers, no backtick code spans. Use plain numbered lines like '1. ' if listing items.";
+const SYS = {
+  router:"You are an engineering manager at Wayfind, a delivery route-planning SaaS. Given a feature request, decide which specialist track(s) are needed: backend (API/data/services) and/or frontend (Driver App UI). Respond with exactly one line starting 'TRACKS: backend' or 'TRACKS: frontend' or 'TRACKS: both', then one short sentence explaining why. No other text."+PLAIN_TEXT_RULE,
+  backend:"You are a backend engineer at Wayfind. Given a feature request and relevant internal docs, write a short implementation sketch (under 100 words) for the backend/API/service side only. Reference docs by name where relevant. No preamble."+PLAIN_TEXT_RULE,
+  frontend:"You are a frontend engineer on the Driver App team at Wayfind. Given a feature request and relevant internal docs, write a short implementation sketch (under 100 words) for the UI/app side only. No preamble."+PLAIN_TEXT_RULE,
+  integrator:"You are a tech lead merging specialist proposals into one coherent plan. Given a feature request and one or two specialist drafts, produce a single combined plan under 130 words, explicitly naming any interface/contract point the tracks must agree on (or stating there are none if only one track exists). No preamble."+PLAIN_TEXT_RULE,
+  integratorRevise:"You are the same tech lead revising the combined plan based on reviewer feedback. Given the original plan and the feedback, produce a revised plan (under 130 words) that directly addresses the feedback. No preamble."+PLAIN_TEXT_RULE,
+  reviewer:"You are a tech lead reviewing a proposed plan. Give a one-line verdict (Approve / Needs changes) then up to 3 short numbered risk or edge-case bullets. Under 110 words. No preamble."+PLAIN_TEXT_RULE
+};
+
+function templateFallback(stage, keyText, ctx){
+  const topTitles = (ctx.hits||[]).map(h=>h.doc.title).join(' / ') || 'no strongly matching doc';
+  if(stage==='router') return `TRACKS: both (default assumption — no live connection to determine routing from wording).\n\n[Template response — no live model connection.]`;
+  if(stage==='backend') return `Likely touches ${topTitles}. A connected Backend agent would propose specific API/service changes here.\n\n[Template response — no live model connection.]`;
+  if(stage==='frontend') return `Likely touches ${topTitles}. A connected Frontend agent would propose specific UI changes here.\n\n[Template response — no live model connection.]`;
+  if(stage==='integrator' || stage==='integratorRevise') return `Combining available specialist output (see above). A connected Integrator agent would explicitly reconcile any interface conflicts here.\n\n[Template response — no live model connection.]`;
+  if(stage==='reviewer') return `Template verdict: Needs live review. A connected Reviewer agent would give a real Approve / Needs-changes verdict with specific risks.\n\n[Template response — no live model connection.]`;
+  return '[Template response — no live model connection.]';
+}
+
+let mode = 'live';
+let selectedPreset = 0;
+let sessionConnected = false;
+let sessionUsedFallback = false;
+
+const pipelineEl = document.getElementById('pipeline');
+const outputsEl = document.getElementById('outputs');
+const presetsEl = document.getElementById('presets');
+const ticketInput = document.getElementById('ticket-input');
+const runBtn = document.getElementById('run-btn');
+const resetBtn = document.getElementById('reset-btn');
+const statusNote = document.getElementById('status-note');
+const statusNoteText = document.getElementById('status-note-text');
+const statusDismiss = document.getElementById('status-dismiss');
+statusDismiss.addEventListener('click', ()=> statusNote.classList.add('dismissed'));
+const sensSlider = document.getElementById('sens-slider');
+const sensVal = document.getElementById('sens-val');
+const costInput = document.getElementById('cost-input');
+
+const AGENT_META = {
+  router:{label:'Router', title:'Route the request', num:'1', desc:'Decides whether Backend, Frontend, or both teams need to work this ticket.'},
+  retriever:{label:'Retriever', title:'Retrieve context', num:'2', desc:'Searches internal docs locally for context relevant to the ticket.'},
+  backend:{label:'Backend agent', title:'Draft backend changes', num:'3', desc:'Sketches the API/service-side implementation.'},
+  frontend:{label:'Frontend agent', title:'Draft frontend changes', num:'3', desc:'Sketches the UI/app-side implementation.'},
+  integrator:{label:'Integrator', title:'Merge & reconcile', num:'4', desc:'Combines specialist drafts into one coherent plan.'},
+  reviewer:{label:'Reviewer', title:'Review & risk-check', num:'5', desc:'Checks the plan for risks and edge cases, then approves or sends it back.'},
+  integrator2:{label:'Integrator', title:'Revise plan', num:'6', desc:'Reworks the plan to address the reviewer\'s feedback.'},
+  reviewer2:{label:'Reviewer', title:'Re-review', num:'7', desc:'Checks the revised plan for a final verdict.'}
+};
+const PILL_LABEL = {idle:'To do', running:'In progress', done:'Done', hit:'Cache hit'};
+function colorVar(key){ return key.replace(/2$/,''); }
+
+function stageInnerHTML(key){
+  const m = AGENT_META[key];
+  const c = colorVar(key);
+  return `<div class="stage" data-state="idle" id="stage-${key}">
+    <div class="stage-top-bar" style="background:var(--${c})"></div>
+    <div class="stage-head">
+      <span class="ticket-key">REL-${m.num}</span>
+      <span class="avatar" style="background:var(--${c})">${m.label.charAt(0)}</span>
+    </div>
+    <div class="agent-label" style="color:var(--${c})">${m.label}</div>
+    <h3>${m.title}</h3>
+    <p class="stage-desc">${m.desc}</p>
+    <div class="stage-status" id="stage-status-${key}"><span class="status-pill" data-pill="idle">To do</span></div>
+  </div>`;
+}
+function stageHTML(key){ return `<div class="pcol">${stageInnerHTML(key)}</div>`; }
+function arrowHTML(){ return `<div class="arrow">→</div>`; }
+
+function renderInitialPipeline(){
+  pipelineEl.innerHTML = stageHTML('router');
+  updateProgressSummary();
+}
+function extendPipeline(tracks){
+  const branchKeys = tracks==='both' ? ['backend','frontend'] : [tracks];
+  const branchInner = branchKeys.map(k=>stageInnerHTML(k)).join('');
+  const branchLabel = tracks==='both' ? `<div class="branch-label">∥ parallel</div>` : `<div class="branch-label">single track</div>`;
+  pipelineEl.insertAdjacentHTML('beforeend', arrowHTML()+stageHTML('retriever')+arrowHTML()+
+    `<div class="branch-wrap">${branchLabel}${branchInner}</div>`+arrowHTML()+stageHTML('integrator')+arrowHTML()+stageHTML('reviewer'));
+  updateProgressSummary();
+}
+function extendRevision(){
+  pipelineEl.insertAdjacentHTML('beforeend',
+    arrowHTML()+`<div class="pcol"><div class="revision-label">↻ feedback loop</div>${stageInnerHTML('integrator2')}</div>`
+    +arrowHTML()+stageHTML('reviewer2'));
+  updateProgressSummary();
+}
+function updateProgressSummary(){
+  const counts = {idle:0, running:0, done:0, hit:0};
+  pipelineEl.querySelectorAll('.stage').forEach(s=>{ counts[s.dataset.state] = (counts[s.dataset.state]||0)+1; });
+  const el = document.getElementById('progress-summary');
+  el.innerHTML = `<span class="ps-item ps-done">${counts.done+counts.hit} done</span><span class="ps-item ps-running">${counts.running} in progress</span><span class="ps-item ps-todo">${counts.idle} to do</span>`;
+}
+
+function renderPresets(){
+  presetsEl.innerHTML = PRESETS.map((p,i)=>`<button class="preset-btn" data-i="${i}">${p.text}</button>`).join('');
+  presetsEl.querySelectorAll('.preset-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      selectedPreset = parseInt(btn.dataset.i);
+      ticketInput.value = PRESETS[selectedPreset].text;
+      markSelectedPreset();
+    });
+  });
+}
+function markSelectedPreset(){
+  presetsEl.querySelectorAll('.preset-btn').forEach((b,i)=>b.classList.toggle('selected', ticketInput.value===PRESETS[i].text));
+}
+
+function setStageState(key,state,detail){
+  const el = document.getElementById(`stage-${key}`);
+  if(!el) return;
+  el.dataset.state = state;
+  const st = document.getElementById(`stage-status-${key}`);
+  const spinner = state==='running' ? '<span class="spin"></span>' : '';
+  st.innerHTML = `<span class="status-pill" data-pill="${state}">${spinner}${PILL_LABEL[state]||state}</span>${detail?`<span class="stage-detail">${detail}</span>`:''}`;
+  updateProgressSummary();
+}
+function addOutputPanel(agentKey, label, bodyHTML, badge){
+  const c = colorVar(agentKey);
+  const div = document.createElement('div');
+  div.className = 'out-panel';
+  div.style.borderLeftColor = `var(--${c})`;
+  div.innerHTML = `<div class="out-head"><span class="tag" style="color:var(--${c})">${label}</span>${badge?`<span class="badge ${badge.type}">${badge.text}</span>`:''}</div><div class="body">${bodyHTML}</div>`;
+  outputsEl.appendChild(div);
+}
+function badgeFor(source, sim){
+  if(source==='hit') return {type:'hit', text:`CACHE HIT${sim?` · sim ${sim}`:''}`};
+  if(source==='live') return {type:'live', text:'LIVE MODEL CALL'};
+  if(source==='scripted') return {type:'scripted', text:'SCRIPTED (preset)'};
+  if(source==='local') return {type:'local', text:'LOCAL · $0'};
+  return {type:'template', text:'TEMPLATE (no connection)'};
+}
+function updateStatsUI(){
+  document.getElementById('s-tickets').textContent = stats.tickets;
+  const total = stats.hits+stats.misses;
+  document.getElementById('s-hitrate').textContent = total? Math.round(100*stats.hits/total)+'%' : '—';
+  document.getElementById('s-avoided').textContent = stats.avoided;
+  document.getElementById('s-tokens').textContent = stats.tokensSaved.toLocaleString();
+  const rate = parseFloat(costInput.value)||0;
+  document.getElementById('s-saved').textContent = '$'+((stats.tokensSaved/1000)*rate).toFixed(3);
+}
+function setStatus(msg, kind){
+  statusNoteText.textContent = msg;
+  statusNote.className = 'status-banner ' + (kind||'info');
+  statusDismiss.hidden = false;
+}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function escapeHTML(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function runStage(stage, keyText, threshold, liveCall, cannedText, ctx){
+  const cache = checkCache(stage, keyText, threshold);
+  if(cache.hit){
+    stats.hits++; stats.avoided++;
+    stats.tokensSaved += (cache.entry.usage.input_tokens+cache.entry.usage.output_tokens);
+    return {output:cache.entry.output, source:'hit', sim:cache.sim.toFixed(2)};
+  }
+  stats.misses++;
+  let output, usage, source;
+  if(mode==='live'){
+    try{ const r = await liveCall(); output=r.text; usage=r.usage; source='live'; sessionConnected=true; }
+    catch(e){ /* fall through */ }
+  }
+  if(!output){
+    if(cannedText){ output=cannedText; source='scripted'; usage={input_tokens:0,output_tokens:0}; }
+    else { output=templateFallback(stage, keyText, ctx||{}); source='template'; usage={input_tokens:0,output_tokens:0}; }
+    sessionUsedFallback = true;
+  }
+  storeCache(stage, keyText, output, usage);
+  return {output, source};
+}
+
+function parseTracks(routerText){
+  const m = routerText.match(/TRACKS:\s*(backend|frontend|both)/i);
+  return m ? m[1].toLowerCase() : 'both';
+}
+function needsChanges(reviewText){ return /needs changes/i.test(reviewText); }
+
+async function runPipeline(){
+  const ticketText = ticketInput.value.trim();
+  if(!ticketText) return;
+  runBtn.disabled = true;
+  outputsEl.innerHTML = '';
+  renderInitialPipeline();
+  sessionConnected = false; sessionUsedFallback = false;
+  setStatus('Running…', 'info');
+
+  const threshold = parseFloat(sensSlider.value);
+  const preset = PRESETS.find(p=>p.text===ticketText);
+
+  setStageState('router','running');
+  const routerRes = await runStage('router', ticketText, threshold,
+    ()=>callGemini(SYS.router, `Feature request: "${ticketText}"`),
+    preset ? preset.canned.router : null);
+  const tracks = preset ? preset.canned.tracks : parseTracks(routerRes.output);
+  setStageState('router', routerRes.source==='hit'?'hit':'done', routerRes.source==='hit'?`sim ${routerRes.sim}`:`→ ${tracks}`);
+  addOutputPanel('router','Router decision', escapeHTML(routerRes.output), badgeFor(routerRes.source, routerRes.sim));
+
+  extendPipeline(tracks);
+
+  setStageState('retriever','running');
+  await sleep(150);
+  const hits = retrieve(ticketText, 2);
+  const retrievedSnippet = hits.map(h=>`${h.doc.title}: ${h.doc.text}`).join('\n\n');
+  const chipHTML = hits.map(h=>`<span class="doc-chip">${h.doc.title} · ${h.score.toFixed(2)}</span>`).join('');
+  setStageState('retriever','done','local TF-IDF');
+  addOutputPanel('retriever','Retrieved context', chipHTML+`<div style="margin-top:8px;color:var(--text-dim)">${escapeHTML(retrievedSnippet)}</div>`, badgeFor('local'));
+
+  const specialistKeys = tracks==='both' ? ['backend','frontend'] : [tracks];
+  specialistKeys.forEach(k=>setStageState(k,'running'));
+  const specialistResults = {};
+  await Promise.all(specialistKeys.map(async k=>{
+    const key = ticketText+' :: '+k;
+    const res = await runStage(k, key, threshold,
+      ()=>callGemini(SYS[k], `Feature request: "${ticketText}"\n\nRelevant internal docs:\n${retrievedSnippet}`),
+      preset ? preset.canned[k] : null, {hits});
+    specialistResults[k] = res;
+    setStageState(k, res.source==='hit'?'hit':'done', res.source==='hit'?`sim ${res.sim}`:'');
+    addOutputPanel(k, `${AGENT_META[k].label} output`, escapeHTML(res.output), badgeFor(res.source, res.sim));
+  }));
+
+  setStageState('integrator','running');
+  const draftsText = specialistKeys.map(k=>`${AGENT_META[k].label}: ${specialistResults[k].output}`).join('\n\n');
+  const integKey = ticketText+' :: '+specialistKeys.map(k=>specialistResults[k].output).join('|').slice(0,200);
+  const integ1 = await runStage('integrator', integKey, threshold,
+    ()=>callGemini(SYS.integrator, `Feature request: "${ticketText}"\n\nSpecialist drafts:\n${draftsText}`),
+    preset ? preset.canned.integrator : null, {hits});
+  setStageState('integrator', integ1.source==='hit'?'hit':'done', integ1.source==='hit'?`sim ${integ1.sim}`:'');
+  addOutputPanel('integrator','Integrator — combined plan', escapeHTML(integ1.output), badgeFor(integ1.source, integ1.sim));
+
+  setStageState('reviewer','running');
+  const rev1 = await runStage('reviewer', integ1.output, threshold,
+    ()=>callGemini(SYS.reviewer, `Feature request: "${ticketText}"\n\nProposed plan:\n${integ1.output}`),
+    preset ? preset.canned.reviewer : null, {hits});
+  setStageState('reviewer', rev1.source==='hit'?'hit':'done', rev1.source==='hit'?`sim ${rev1.sim}`:'');
+  addOutputPanel('reviewer','Reviewer — round 1', escapeHTML(rev1.output), badgeFor(rev1.source, rev1.sim));
+
+  const shouldRevise = preset ? preset.canned.needsRevision : needsChanges(rev1.output);
+  if(shouldRevise){
+    extendRevision();
+    setStageState('integrator2','running');
+    const revKey = integ1.output+' :: '+rev1.output;
+    const integ2 = await runStage('integratorRevise', revKey, threshold,
+      ()=>callGemini(SYS.integratorRevise, `Original plan:\n${integ1.output}\n\nReviewer feedback:\n${rev1.output}`),
+      preset ? preset.canned.integratorRevised : null, {hits});
+    setStageState('integrator2', integ2.source==='hit'?'hit':'done', integ2.source==='hit'?`sim ${integ2.sim}`:'');
+    addOutputPanel('integrator2','Integrator — revised plan', escapeHTML(integ2.output), badgeFor(integ2.source, integ2.sim));
+
+    setStageState('reviewer2','running');
+    const rev2 = await runStage('reviewer2', integ2.output, threshold,
+      ()=>callGemini(SYS.reviewer, `Revised plan:\n${integ2.output}\n\nOriginal feedback it addresses:\n${rev1.output}`),
+      preset ? preset.canned.reviewerRound2 : null, {hits});
+    setStageState('reviewer2', rev2.source==='hit'?'hit':'done', rev2.source==='hit'?`sim ${rev2.sim}`:'');
+    addOutputPanel('reviewer2','Reviewer — round 2 (final)', escapeHTML(rev2.output), badgeFor(rev2.source, rev2.sim));
+  }
+
+  if(sessionConnected && !sessionUsedFallback){
+    setStatus('Connected — every non-cached stage this run was a real Gemini API call.', 'live');
+  } else if(sessionConnected && sessionUsedFallback){
+    setStatus('Partially connected — some stages used a live call, others fell back (see badges below).', 'fallback');
+  } else if(mode==='live'){
+    setStatus('Could not reach the Gemini API — ' + (lastErrorDetail || 'unknown error') + '. Showing scripted/template responses instead.', 'fallback');
+  } else {
+    setStatus('Demo playback mode — scripted for the 4 presets, template-based for custom text.', 'info');
+  }
+
+  stats.tickets++;
+  updateStatsUI();
+  runBtn.disabled = false;
+}
+
+renderInitialPipeline();
+renderPresets();
+markSelectedPreset();
+ticketInput.addEventListener('input', markSelectedPreset);
+runBtn.addEventListener('click', runPipeline);
+resetBtn.addEventListener('click', ()=>{
+  cacheStore = []; stats = {tickets:0,hits:0,misses:0,avoided:0,tokensSaved:0};
+  outputsEl.innerHTML=''; renderInitialPipeline(); updateStatsUI();
+  setStatus('Session reset.','info');
+});
+sensSlider.addEventListener('input', ()=>{ sensVal.textContent = parseFloat(sensSlider.value).toFixed(2); });
+costInput.addEventListener('input', updateStatsUI);
+document.getElementById('mode-live').addEventListener('click', ()=>{
+  mode='live';
+  document.getElementById('mode-live').classList.add('active');
+  document.getElementById('mode-demo').classList.remove('active');
+  setStatus('Will call your Worker (→ Gemini) on the next run — falls back to scripted/template output if it\'s unreachable.','info');
+});
+document.getElementById('mode-demo').addEventListener('click', ()=>{
+  mode='demo';
+  document.getElementById('mode-demo').classList.add('active');
+  document.getElementById('mode-live').classList.remove('active');
+  setStatus('Demo playback: scripted for the 4 presets, template-based for custom text.','info');
+});
+updateStatsUI();
+</script>
+</body>
+</html>
